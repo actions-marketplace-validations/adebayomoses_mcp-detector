@@ -49,6 +49,19 @@ describe("CLI end to end", () => {
     expect(md).not.toMatch(/\x1b\[/); // no ANSI codes in files
   }, 60_000);
 
+  it("scan --format sarif -o writes a file-anchored SARIF report", () => {
+    const dir = tmp();
+    const out = join(dir, "mcp-report.sarif");
+    writeFileSync(join(dir, "package.json"), "{}");
+    const r = runCli(["scan", "--format", "sarif", "-o", out, "--sarif-location", "package.json", ...vulnerable], { cwd: dir });
+    expect(r.code).toBe(0);
+    const sarif = JSON.parse(readFileSync(out, "utf8"));
+    expect(sarif.version).toBe("2.1.0");
+    expect(sarif.runs[0].results.length).toBeGreaterThan(0);
+    expect(sarif.runs[0].results.every((item: any) => item.locations[0].physicalLocation.artifactLocation.uri === "package.json")).toBe(true);
+    expect(r.stderr).toContain("Report written to");
+  }, 60_000);
+
   it("report re-renders the last scan and saved JSON files", () => {
     const dir = tmp();
     runCli(["scan", "--format", "json", "--output", join(dir, "r.json"), ...vulnerable], { cwd: dir });

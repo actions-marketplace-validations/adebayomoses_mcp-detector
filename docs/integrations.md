@@ -58,6 +58,30 @@ npx mcp-detector scan --format json --output mcp-report.json --fail-on high -- n
 - Exit code `1` → threshold met or server unreachable; `2` → usage/internal error.
 - Upload `mcp-report.json` as a build artifact. Render it later with `mcp-detector report mcp-report.json --format markdown`.
 
+## GitHub code scanning (SARIF)
+
+Generate a SARIF 2.1.0 report and upload it to GitHub code scanning. Ensure code scanning is enabled for the repository. GitHub needs a file anchor to display each result, so SARIF results point to line 1 of `package.json` by default. Choose another file with `--sarif-location` if that is a better anchor.
+
+```yaml
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - name: Scan MCP server
+        run: npx mcp-detector scan --format sarif --sarif-location package.json --output mcp-report.sarif -- node build/index.js
+        continue-on-error: true
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: mcp-report.sarif
+```
+
+Each result includes a physical file anchor at line 1 (default `package.json`, configurable with `--sarif-location`) and retains the affected MCP tool as a logical location when available. Rule/tool partial fingerprints keep alerts distinct. Security-category rules alone receive the `security` tag and a `security-severity` score. Critical/high findings map to `error`, medium to `warning`, and low/info to `note`.
+
 ## JSON report shape
 
 ```json

@@ -22,7 +22,8 @@ export function scanCommand(): Command {
     .option("--fail-on <severity>", "exit with code 1 if any finding is at or above: info|low|medium|high|critical")
     .option("--baseline <file>", "compare tool definitions against a pinned baseline (default: ./mcp-detector.lock.json if present)")
     .option("--no-baseline", "ignore any pinned baseline")
-    .option("--active", "also call tools that look read-only, to measure latency and timeouts (off by default)");
+    .option("--active", "also call tools that look read-only, to measure latency and timeouts (off by default)")
+    .option("--sarif-location <path>", "file anchor for SARIF results (default: package.json)", "package.json");
   addTargetOptions(cmd);
   addOutputOptions(cmd);
   cmd.action(async (target: string[], opts: CommonOptions) => {
@@ -32,7 +33,7 @@ export function scanCommand(): Command {
     const { result, snapshot, ruleErrors } = await runScan(config);
     saveLastScan(result);
     if (opts.history !== false) saveHistory(result);
-    writeOutput(renderReport(result, format, { verbose: opts.verbose, color: opts.color !== false && !opts.output && pc.isColorSupported }), opts.output);
+    writeOutput(renderReport(result, format, { verbose: opts.verbose, color: opts.color !== false && !opts.output && pc.isColorSupported, sarifLocation: opts.sarifLocation }), opts.output);
 
     if (format === "terminal") {
       for (const e of ruleErrors) process.stderr.write(`warning: rule ${e.rule} failed to run: ${e.error}\n`);

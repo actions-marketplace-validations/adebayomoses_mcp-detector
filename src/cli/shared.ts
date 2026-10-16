@@ -19,6 +19,7 @@ export interface CommonOptions {
   header?: string[];
   transport?: "stdio" | "http" | "sse";
   format?: ReportFormat;
+  sarifLocation?: string;
   output?: string;
   failOn?: string;
   active?: boolean;
@@ -52,7 +53,7 @@ export function addTargetOptions(cmd: Command): Command {
 
 export function addOutputOptions(cmd: Command): Command {
   return cmd
-    .option("-f, --format <format>", "terminal | json | markdown | html", "terminal")
+    .option("-f, --format <format>", "terminal | json | markdown | html | sarif", "terminal")
     .option("-o, --output <file>", "write the report to a file instead of stdout")
     .option("--verbose", "include explanations and remediation for each finding")
     .option("--no-history", "do not record this scan in the scan history")
@@ -168,8 +169,8 @@ export function saveLastScan(result: ScanResult): void {
 export function validateFormat(f: string | undefined): ReportFormat {
   const v = (f ?? "terminal").toLowerCase();
   if (v === "md") return "markdown";
-  if (v === "terminal" || v === "json" || v === "markdown" || v === "html") return v;
-  throw new Error(`Invalid --format "${f}". Use terminal, json, markdown or html.`);
+  if (v === "terminal" || v === "json" || v === "markdown" || v === "html" || v === "sarif") return v;
+  throw new Error(`Invalid --format "${f}". Use terminal, json, markdown, html or sarif.`);
 }
 
 /** Load community rules (declarative always; JS plugins only with --allow-plugins) and tell the user what happened. */

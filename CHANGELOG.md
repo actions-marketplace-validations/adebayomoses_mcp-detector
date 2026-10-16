@@ -5,6 +5,7 @@ All notable changes are documented here. Format based on [Keep a Changelog](http
 ## [0.1.0] - Unreleased
 
 ### Added
+- SARIF 2.1.0 reports via `--format sarif`, with configurable GitHub Code Scanning file anchors and logical tool locations.
 - CLI: `scan`, `inspect`, `test`, `report`, `rules`, `init`.
 - Transports: stdio, Streamable HTTP (with SSE fallback).
 - 32 detection rules (MCP-001 – MCP-032) across protocol, schema, security, tools, quality and performance.
