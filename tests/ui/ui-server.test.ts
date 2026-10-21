@@ -304,10 +304,43 @@ describe("plain-language error explanations", () => {
     ["Invalid URL", {}, /valid web address/],
     ["Server's protocol version is not supported: 1999-01-01", {}, /protocol version/],
     ["Error POSTing to endpoint: 404 Not Found", { url: "https://x.example/wrong" }, /no MCP server at that path/],
+    // Python servers (uvx, uv run, python -m, pipx)
+    ["spawn uvx ENOENT", { command: "uvx my-server" }, /"uvx" was not found[\s\S]*docs\.astral\.sh\/uv/],
+    ["spawn uv ENOENT", { command: "uv run server.py" }, /"uv" was not found[\s\S]*docs\.astral\.sh\/uv/],
+    ["spawn python ENOENT", { command: "python -m my_server" }, /"python" was not found[\s\S]*python\.org\/downloads[\s\S]*python3/],
+    ["Connection closed", { command: "python3 server.py", stderr: "bash: python3: command not found" }, /"python3" was not found[\s\S]*python\.org/],
+    ["Connection closed", { command: "python server.py", stderr: "Python was not found; run without arguments to install from the Microsoft Store" }, /"python" was not found[\s\S]*python\.org/],
+    ["spawn pipx ENOENT", { command: "pipx run my-server" }, /"pipx" was not found[\s\S]*pipx\.pypa\.io/],
+    ["spawn C:\\Python312\\python.exe ENOENT", { command: "C:\\Python312\\python.exe -m s" }, /"python" was not found/],
+    ["Connection closed", { command: "python -m my_server", stderr: "Traceback (most recent call last):\n  File <frozen runpy>, line 198\nModuleNotFoundError: No module named 'httpx'" }, /package called "httpx"[\s\S]*pip install httpx/],
+    ["Connection closed", { command: "python server.py", stderr: "ModuleNotFoundError: No module named 'mcp.server.fastmcp'" }, /package called "mcp"[\s\S]*pip install mcp/],
+    ["Connection closed", { stderr: "/usr/bin/python: No module named my_server" }, /package called "my_server"/],
+    ["Connection closed", { command: "uvx my-server", stderr: "error: The current Python version (3.8.10) is not compatible with the package's requires-python>=3.10" }, /newer version of Python[\s\S]*Python 3\.10 or newer/],
+    ["Connection closed", { command: "pipx run my-server", stderr: "ERROR: Package 'my-server' requires a different Python: 3.8.10 not in '>=3.11'" }, /newer version of Python[\s\S]*Python 3\.11 or newer/],
+    ["Connection closed", { command: "python server.py", stderr: "RuntimeError: Python 3.7 is not supported by this package" }, /newer version of Python/],
+    // Version problem wins over a missing-package message that an installer may print as well.
+    ["Connection closed", { stderr: "requires-python>=3.12\nModuleNotFoundError: No module named 'x'" }, /newer version of Python[\s\S]*3\.12/],
+    // A stray print() corrupts the stream: the client reports JSON parse errors.
+    [`Unexpected token 'S', "Starting my server..." is not valid JSON`, { command: "python server.py" }, /not an MCP message[\s\S]*stderr/],
+    ["Unexpected non-whitespace character after JSON at position 4", { command: "uv run server.py" }, /not an MCP message/],
+    ["SyntaxError: invalid JSON from server", { command: "python server.py" }, /not an MCP message/],
   ])("%s", (raw, ctx, title) => {
     const out = e(raw, ctx);
     expect(out.title + " " + out.hint).toMatch(title);
     expect(out.hint.length).toBeGreaterThan(20);
+  });
+  it("does not blame stdout printing when a web address returned a non-JSON page", () => {
+    const out = e(`Unexpected token '<', "<!DOCTYPE "... is not valid JSON`, { url: "https://x.example/mcp" });
+    expect(out.title).not.toMatch(/not an MCP message/);
+  });
+  it("keeps the Node hints for Node servers", () => {
+    const out = e("spawn nope ENOENT", { command: "nope" });
+    expect(out.hint).toMatch(/node or npx/);
+    expect(out.hint).not.toMatch(/python\.org/);
+  });
+  it("keeps hints short and free of raw error text", () => {
+    const out = e("Connection closed", { command: "python s.py", stderr: "ModuleNotFoundError: No module named 'httpx'" });
+    expect(out.hint.length).toBeLessThan(400);
   });
   it("always gives a usable fallback", () => {
     expect(e("something unexpected").title).toBe("Could not connect to the server.");
